@@ -63,6 +63,10 @@ pre_configure_target() {
 }
 
 post_makeinstall_target() {
-  # clean up
-  safe_remove ${INSTALL}
+  # clean up: keep libs and plugins for image, drop dev/doc files
+  for d in bin include share; do
+    if [ -e ${INSTALL}/usr/$d -o -L ${INSTALL}/usr/$d ]; then
+      safe_remove ${INSTALL}/usr/$d
+    fi
+  done
 }

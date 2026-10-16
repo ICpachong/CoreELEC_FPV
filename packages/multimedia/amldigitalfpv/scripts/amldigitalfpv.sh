@@ -1,0 +1,48 @@
+#!/bin/bash
+
+if [ -f /storage/digitalfpv/wfb.conf ]; then
+	. /storage/digitalfpv/wfb.conf
+elif [ -f /flash/wfb.conf ]; then
+	. /flash/wfb.conf
+fi
+
+alignment=${alignment:-0}
+dec_mode=${dec_mode:-1}
+sound_volume=${sound_volume:-100}
+sound=${sound:-0}
+buf_level=${buf_level:-8}
+video_width=${video_width:-1920}
+video_height=${video_height:-1080}
+bad_frame=${bad_frame:-0}
+
+BIN=/usr/bin/AMLDigitalFPV
+if [ -f /storage/streamer/AMLDigitalFPV.new ]; then
+	mv /storage/streamer/AMLDigitalFPV.new /storage/streamer/AMLDigitalFPV
+fi
+if [ -x /storage/streamer/AMLDigitalFPV ]; then
+	BIN=/storage/streamer/AMLDigitalFPV
+	export GST_PLUGIN_PATH=/storage/streamer/gstreamer/
+	export GST_PLUGIN_SCANNER=/storage/streamer/gstreamer/gst-plugin-scanner
+	export LD_LIBRARY_PATH=$GST_PLUGIN_PATH:$LD_LIBRARY_PATH
+fi
+
+pactl load-module module-alsa-sink device=hdmi:CARD=AMLAUGESOUND,DEV=0 sink_name=hdmi_out || true
+pactl set-default-sink hdmi_out || true
+pactl set-sink-volume @DEFAULT_SINK@ ${sound_volume}% || true
+
+if [ ! -f /tmp/added_vfm ] ; then
+	echo '[+]add VFM map'
+	echo 'add vdec-map-0 vdec.h265.00 amvideo' >/sys/class/vfm/map
+	touch /tmp/added_vfm
+fi
+
+if [ "$bad_frame" != "0" ]; then
+	echo "[+]Error policy: Ignore ERROR"
+	echo 1 > /sys/module/amvdec_h265/parameters/hacked_lowlatency
+	echo 0 >/sys/module/amvdec_h265/parameters/ref_frame_mark_flag
+	echo ${bad_frame} > /sys/module/amvdec_h265/parameters/error_handle_policy
+else
+	echo "[+]Error policy: Drop FRAME"
+fi
+
+$BIN -w ${video_width} -h ${video_height} -p 120 -a ${sound} -l ${buf_level} -g ${alignment} -m ${dec_mode}

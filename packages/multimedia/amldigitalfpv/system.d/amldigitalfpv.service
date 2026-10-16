@@ -1,0 +1,14 @@
+[Unit]
+Description=AMLdigitalFPV streamer
+After=network.target amlgsmenu.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/amldigitalfpv.sh
+Restart=on-failure
+RestartSec=2
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

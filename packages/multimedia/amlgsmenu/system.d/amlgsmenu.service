@@ -1,0 +1,14 @@
+[Unit]
+Description=AMLgsMenu OSD
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/gsmenu.sh
+Restart=on-failure
+RestartSec=2
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
