@@ -40,3 +40,7 @@ tools/mkpkg/*.git
 
 # ignore old linux configs
 projects/**/*.old
+
+# local build wrapper log and prebuild reference images
+build_ng.log
+/prebuild/
