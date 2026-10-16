@@ -3,11 +3,11 @@
 # Copyright (C) 2016-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="udevil"
-PKG_VERSION="f2b715d1d821e4b69b2fb0864a5a178dd67877f0"
-PKG_SHA256="3351d56c553c518cb2ce7b24892a4b62d630ba4f6ebee2c3994c4be9828f0629"
+PKG_VERSION="0.4.4"
+PKG_SHA256="854531212e5e4d7c795f168bf7882bc628b6ce1c14e3b16d9523e91c65e1a864"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/alpharde/udevil"
-PKG_URL="https://github.com/alpharde/udevil/archive/${PKG_VERSION}.tar.gz"
+PKG_URL="http://127.0.0.1:8080/udevil-0.4.4.tar.gz"
 PKG_DEPENDS_TARGET="toolchain systemd glib"
 PKG_LONGDESC="Mounts and unmounts removable devices and networks without a password."
 

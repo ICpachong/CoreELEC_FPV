@@ -3,11 +3,11 @@
 # Copyright (C) 2016-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="openvpn"
-PKG_VERSION="2.6.10"
-PKG_SHA256="1993bbb7b9edb430626eaa24573f881fd3df642f427fcb824b1aed1fca1bcc9b"
+PKG_VERSION="2.6.23"
+PKG_SHA256="4041c709162bec1325abf5aa8cf27a255cc477c634b15ee310411c701fc40a96"
 PKG_LICENSE="GPL"
 PKG_SITE="https://openvpn.net"
-PKG_URL="https://swupdate.openvpn.org/community/releases/${PKG_NAME}-${PKG_VERSION}.tar.gz"
+PKG_URL="https://github.com/OpenVPN/openvpn/releases/download/v${PKG_VERSION}/openvpn-${PKG_VERSION}.tar.gz"
 PKG_DEPENDS_TARGET="toolchain libcap-ng lz4 lzo openssl"
 PKG_LONGDESC="A full featured SSL VPN software solution that integrates OpenVPN server capabilities."
 PKG_TOOLCHAIN="configure"
