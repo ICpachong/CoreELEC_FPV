@@ -27,6 +27,7 @@
 | `doc/模块流程图.md` | AMLgsMenu / AMLDigitalFPV 详细流程图 |
 | `doc/刷机指南.md` | 烧写步骤与常见问题 |
 | `build_ng.sh` | 一键构建 Amlogic-ng 镜像 |
+| `build_ng_w100d.sh` | 只构建中兴 W100D 板型镜像 |
 
 ## 构建
 
@@ -41,6 +42,22 @@
 ```shell
 PROJECT=Amlogic-ce DEVICE=Amlogic-ng ARCH=arm DISTRO=CoreELEC make image
 ```
+
+只构建中兴 W100D 板型(不产出 Generic/Odroid/Radxa 镜像):
+
+```shell
+./build_ng_w100d.sh
+```
+
+等价于:
+
+```shell
+SUBDEVICES_FILTER=ZTE_W100D \
+PROJECT=Amlogic-ce DEVICE=Amlogic-ng ARCH=arm DISTRO=CoreELEC make image
+```
+
+`SUBDEVICES_FILTER` 可列出多个板型,例如 `SUBDEVICES_FILTER="ZTE_W100D Odroid_N2"`;
+不设置时按 `projects/Amlogic-ce/devices/Amlogic-ng/options` 里的 `SUBDEVICES` 全量构建。
 
 方式二:Docker 构建
 
