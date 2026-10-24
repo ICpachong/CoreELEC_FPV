@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2018-present Team CoreELEC (https://coreelec.org)
+#
+# Boot CoreELEC from the device that the running u-boot was scanning.
+#
+# Some vendor u-boot environments (for example the one Armbian installs on
+# Amlogic boxes) scan for "s905_autoscript" instead of CoreELEC's
+# "aml_autoscript". This script is picked up by those environments and hands
+# over to CoreELEC's normal cfgload (configuration + kernel/dtb boot).
+#
+# devtype/devnum are set by the caller (usb/mmc and device number), so this
+# works both for USB sticks and SD cards and does not touch the saved
+# environment.
+
+setenv device "${devtype}"
+setenv devnr "${devnum}"
+setenv partnr "1"
+setenv ce_on_emmc "no"
+
+# same environment initialisation as CoreELEC's aml_autoscript (display
+# address, bootargs base, ...), but without defenv/saveenv so the existing
+# u-boot environment (Armbian's boot order) stays untouched
+run storeargs
+
+if fatload ${devtype} ${devnum}:1 ${loadaddr} cfgload; then
+  autoscr ${loadaddr}
+fi

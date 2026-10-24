@@ -218,9 +218,11 @@ if [ -f $BOOT_ROOT/aml_autoscript ]; then
       done
     fi
   fi
-  if [ -f /usr/share/bootloader/${SUBDEVICE}_cfgload ]; then
+  CFGLOAD="/usr/share/bootloader/${SUBDEVICE}_cfgload"
+  [ -f "${CFGLOAD}" ] || CFGLOAD="/usr/share/bootloader/Generic_cfgload"
+  if [ -f "${CFGLOAD}" ]; then
     echo "Updating cfgload..."
-    cp -p /usr/share/bootloader/${SUBDEVICE}_cfgload $BOOT_ROOT/cfgload
+    cp -p "${CFGLOAD}" $BOOT_ROOT/cfgload
   fi
   /usr/lib/coreelec/check-bl301
   if [ ${?} = 1 ]; then

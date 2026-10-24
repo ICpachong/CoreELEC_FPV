@@ -10,8 +10,12 @@ if [ "${SUBDEVICE:0:9}" != "Odroid_N2" ] && [ "${SUBDEVICE}" != "Odroid_C4" ] &&
   done
 fi
 
-if [ -f $RELEASE_DIR/3rdparty/bootloader/${SUBDEVICE}_cfgload ]; then
-  mcopy -s $RELEASE_DIR/3rdparty/bootloader/${SUBDEVICE}_cfgload "::/cfgload"
+CFGLOAD="$RELEASE_DIR/3rdparty/bootloader/${SUBDEVICE}_cfgload"
+# subdevices without their own cfgload (e.g. ZTE_W100D) reuse the Generic one,
+# otherwise the image is missing cfgload and boots with the vendor bootargs
+[ -f "${CFGLOAD}" ] || CFGLOAD="$RELEASE_DIR/3rdparty/bootloader/Generic_cfgload"
+if [ -f "${CFGLOAD}" ]; then
+  mcopy -s "${CFGLOAD}" "::/cfgload"
 fi
 
 # copy device trees to part1
