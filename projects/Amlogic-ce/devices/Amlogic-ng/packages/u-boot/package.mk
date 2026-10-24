@@ -14,7 +14,8 @@ PKG_CANUPDATE="${PROJECT}*"
 PKG_NEED_UNPACK="$PROJECT_DIR/$PROJECT/bootloader "
 
 for PKG_SUBDEVICE in $SUBDEVICES; do
-  if [ "${PKG_SUBDEVICE}" != "Odroid_HC4" ]; then
+  # Odroid_HC4 reuses Odroid_C4 u-boot, ZTE_W100D keeps the vendor u-boot
+  if [ "${PKG_SUBDEVICE}" != "Odroid_HC4" -a "${PKG_SUBDEVICE}" != "ZTE_W100D" ]; then
     PKG_DEPENDS_TARGET+=" u-boot-${PKG_SUBDEVICE}"
     PKG_NEED_UNPACK+=" $(get_pkg_directory u-boot-${PKG_SUBDEVICE})"
   fi
