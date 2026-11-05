@@ -1,0 +1,13 @@
+[Unit]
+Description=Wired network DHCP retry and static fallback rescue
+After=connman.service
+Wants=connman.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/network-rescue.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

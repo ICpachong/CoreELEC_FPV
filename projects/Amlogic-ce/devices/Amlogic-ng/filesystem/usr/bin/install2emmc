@@ -1,0 +1,225 @@
+#!/bin/sh
+
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2026-present Team CoreELEC (https://coreelec.org)
+#
+# Install @DISTRONAME@ from the current boot media (SD/USB) to the internal
+# eMMC of Amlogic boxes which keep the vendor u-boot in the first 4 MiB of the
+# eMMC (e.g. ZTE W100D) and boot it through "emmc_autoscript" on mmc 1:1.
+#
+# The approach follows Armbian's install-aml.sh:
+#   - save the first 4 MiB (vendor u-boot + environment)
+#   - create a new MBR with a FAT boot partition and an ext4 storage partition
+#   - restore the saved 4 MiB, which puts u-boot back while keeping the new
+#     partition table entries
+#   - temporarily invalidate the Amlogic MPT while partitioning and copying,
+#     then restore it for vendor U-Boot; eMMC boots use emmc_mbr=1 so Linux
+#     keeps the standard MBR partitions
+# The boot partition starts at 1000 MiB so vendor areas below it (u-boot
+# environment, dtb, ...) are left untouched.
+#
+# Usage: install2emmc [-y]
+
+set -u
+
+PATH="/usr/sbin:/usr/bin:/sbin:/bin"
+
+BOOT_MNT=/flash
+STORAGE_MNT=/storage
+MOUNT_BOOT=/tmp/install2emmc.boot
+MOUNT_STORAGE=/tmp/install2emmc.storage
+UBOOT_BACKUP=/tmp/install2emmc.uboot.img
+MPT_BACKUP=/tmp/install2emmc.mpt.img
+MPT_OFFSET=37748736
+MPT_SECTOR=73728
+MPT_RESTORE=no
+
+UNPARTITIONED_MB=1000
+SYSTEM_SIZE_MB=@SYSTEM_SIZE@
+BOOT_LABEL=COREELEC
+STORAGE_LABEL=STORAGE
+
+BOOT_START_MB=${UNPARTITIONED_MB}
+BOOT_END_MB=$(( BOOT_START_MB + SYSTEM_SIZE_MB ))
+STORAGE_START_MB=$(( BOOT_END_MB + 1 ))
+
+ANSWER="no"
+
+die() {
+  echo "error: $*"
+  exit 1
+}
+
+usage() {
+  echo "usage: $(basename "$0") [-y]"
+  echo ""
+  echo "  -y  assume yes (no confirmation prompt)"
+  exit 0
+}
+
+while getopts "hy" opt; do
+  case "${opt}" in
+    y) ANSWER="yes" ;;
+    *) usage ;;
+  esac
+done
+
+# disk device of a partition (e.g. /dev/mmcblk1p1 -> /dev/mmcblk1)
+get_disk() {
+  case "$1" in
+    /dev/mmcblk*|/dev/nvme*) echo "${1%p[0-9]*}" ;;
+    /dev/*) echo "${1%%[0-9]*}" ;;
+  esac
+}
+
+unmount_emmc() {
+  for mnt in $(awk -v d="${EMMC}" '$1 ~ "^" d "p?[0-9]+$" { print $1 }' /proc/mounts); do
+    umount -f "${mnt}" >/dev/null 2>&1 || umount -l "${mnt}" >/dev/null 2>&1
+  done
+}
+
+# --- find the boot media and the eMMC -------------------------------------
+
+BOOT_DEV=$(awk '$2 == "/flash" { print $1; exit }' /proc/mounts)
+[ -n "${BOOT_DEV}" ] || die "/flash is not mounted"
+BOOT_DISK=$(get_disk "${BOOT_DEV}")
+
+EMMC=""
+for block in /sys/block/mmcblk*; do
+  name=${block##*/}
+  case "${name}" in
+    *boot*|*rpmb) continue ;;
+  esac
+  [ "$(cat "${block}/device/type" 2>/dev/null)" = "MMC" ] || continue
+  [ "/dev/${name}" = "${BOOT_DISK}" ] && continue
+  EMMC="/dev/${name}"
+  break
+done
+
+[ -n "${EMMC}" ] || die "no eMMC found (or @DISTRONAME@ is already running from it)"
+
+# --- sanity checks --------------------------------------------------------
+
+# vendor u-boot layout: aml_autoscript is not used on Odroid/LePotato/Radxa
+[ -f "${BOOT_MNT}/aml_autoscript" ] || \
+  die "${BOOT_MNT}/aml_autoscript not found - this boot media uses a different bootloader layout, unsupported"
+
+EMMC_SCRIPT="${BOOT_MNT}/emmc_autoscript"
+[ -f "${EMMC_SCRIPT}" ] || EMMC_SCRIPT=/usr/share/bootloader/emmc_autoscript
+[ -f "${EMMC_SCRIPT}" ] || \
+  die "emmc_autoscript not found - please boot a current @DISTRONAME@ image first"
+
+EMMC_MB=$(( $(cat "/sys/block/${EMMC##*/}/size") / 2048 ))
+[ "${EMMC_MB}" -gt "${STORAGE_START_MB}" ] || \
+  die "${EMMC} is too small (${EMMC_MB}MB)"
+
+STORAGE_MB=$(( EMMC_MB - STORAGE_START_MB ))
+STORAGE_USED_MB=$(df -P -k "${STORAGE_MNT}" 2>/dev/null | awk 'NR == 2 { print int($3 / 1024) }')
+[ -n "${STORAGE_USED_MB}" ] || STORAGE_USED_MB=0
+
+# keep 5% free space, like a normal ext4 install
+if [ "${STORAGE_USED_MB}" -gt $(( STORAGE_MB * 95 / 100 )) ]; then
+  die "/storage uses ${STORAGE_USED_MB}MB but only ${STORAGE_MB}MB fits on ${EMMC}"
+fi
+
+# --- confirmation ---------------------------------------------------------
+
+echo ""
+echo "Installing @DISTRONAME@ to ${EMMC}"
+echo ""
+echo "  boot    : ${BOOT_START_MB}MiB - ${BOOT_END_MB}MiB, vfat, label ${BOOT_LABEL}"
+echo "  storage : ${STORAGE_START_MB}MiB - end, ext4, label ${STORAGE_LABEL} (${STORAGE_MB}MB)"
+echo "  /storage: ${STORAGE_USED_MB}MB will be copied"
+echo ""
+echo "WARNING: ALL DATA ON ${EMMC} WILL BE ERASED!"
+echo ""
+
+if [ "${ANSWER}" != "yes" ]; then
+  printf "Continue (y/N)? "
+  read answer
+  case "${answer}" in
+    y|Y) ;;
+    *) echo "Aborting..."; exit 0 ;;
+  esac
+fi
+
+# --- install --------------------------------------------------------------
+
+unmount_emmc
+
+echo "Backing up the bootloader (first 4 MiB)..."
+dd if="${EMMC}" of="${UBOOT_BACKUP}" bs=1M count=4 conv=fsync >/dev/null 2>&1 || \
+  die "failed to back up the bootloader"
+
+echo "Backing up the Amlogic partition metadata..."
+dd if="${EMMC}" of="${MPT_BACKUP}" bs=512 skip="${MPT_SECTOR}" count=8 conv=fsync >/dev/null 2>&1 || \
+  die "failed to back up the Amlogic partition table"
+
+# CoreELEC's Amlogic kernel gives a valid MPT at 36 MiB precedence over the
+# standard MBR. Temporarily invalidate only its signature while creating and
+# copying the new partitions. The original signature is restored before exit.
+if [ "$(dd if="${MPT_BACKUP}" bs=1 count=3 2>/dev/null)" = "MPT" ]; then
+  echo "Temporarily disabling the Amlogic MPT..."
+  dd if=/dev/zero of="${EMMC}" bs=1 seek="${MPT_OFFSET}" count=4 conv=notrunc,fsync >/dev/null 2>&1 || \
+    die "failed to disable the Amlogic partition table"
+  MPT_RESTORE=yes
+fi
+
+echo "Creating partitions..."
+parted -s "${EMMC}" mklabel msdos || die "failed to create the partition table"
+parted -s "${EMMC}" mkpart primary fat32 "${BOOT_START_MB}MiB" "${BOOT_END_MB}MiB" || \
+  die "failed to create the boot partition"
+parted -s "${EMMC}" mkpart primary ext4 "${STORAGE_START_MB}MiB" 100% || \
+  die "failed to create the storage partition"
+sync
+
+echo "Restoring the bootloader..."
+dd if="${UBOOT_BACKUP}" of="${EMMC}" conv=fsync bs=1 count=442 >/dev/null 2>&1 || \
+  die "failed to restore the bootloader"
+dd if="${UBOOT_BACKUP}" of="${EMMC}" conv=fsync bs=512 skip=1 seek=1 >/dev/null 2>&1 || \
+  die "failed to restore the bootloader"
+sync
+
+partprobe "${EMMC}" >/dev/null 2>&1
+udevadm settle >/dev/null 2>&1
+i=0
+while [ ${i} -lt 20 ] && [ ! -b "${EMMC}p2" ]; do
+  sleep 1
+  i=$(( i + 1 ))
+done
+[ -b "${EMMC}p1" -a -b "${EMMC}p2" ] || die "new partitions did not appear"
+
+echo "Creating filesystems..."
+mkfs.vfat -n "${BOOT_LABEL}" "${EMMC}p1" >/dev/null || die "failed to format ${EMMC}p1"
+mkfs.ext4 -F -q -L "${STORAGE_LABEL}" -m 0 "${EMMC}p2" >/dev/null || die "failed to format ${EMMC}p2"
+
+mkdir -p "${MOUNT_BOOT}" "${MOUNT_STORAGE}"
+
+echo "Copying boot files..."
+mount -t vfat -o rw "${EMMC}p1" "${MOUNT_BOOT}" || die "failed to mount ${EMMC}p1"
+cp -a "${BOOT_MNT}/." "${MOUNT_BOOT}/" || die "failed to copy ${BOOT_MNT}"
+cp -f "${EMMC_SCRIPT}" "${MOUNT_BOOT}/emmc_autoscript" || die "failed to copy emmc_autoscript"
+sync
+umount "${MOUNT_BOOT}" || die "failed to unmount ${EMMC}p1"
+
+echo "Copying storage files..."
+systemctl stop kodi >/dev/null 2>&1
+mount -t ext4 "${EMMC}p2" "${MOUNT_STORAGE}" || die "failed to mount ${EMMC}p2"
+rsync -a --exclude=.please_resize_me "${STORAGE_MNT}/." "${MOUNT_STORAGE}/" || \
+  die "failed to copy ${STORAGE_MNT}"
+sync
+umount "${MOUNT_STORAGE}" || die "failed to unmount ${EMMC}p2"
+
+# Vendor U-Boot needs the original MPT and restores it from the DTB if changed.
+# Do not run partprobe after this: the running installer must keep its MBR view.
+if [ "${MPT_RESTORE}" = "yes" ]; then
+  echo "Restoring the Amlogic partition metadata..."
+  dd if="${MPT_BACKUP}" of="${EMMC}" bs=1 seek="${MPT_OFFSET}" count=4 conv=notrunc,fsync >/dev/null 2>&1 || \
+    die "failed to restore the Amlogic partition table"
+fi
+
+rm -f "${UBOOT_BACKUP}" "${MPT_BACKUP}"
+
+echo ""
+echo "Installation complete."
+echo "Power off the device, remove the SD/USB media and power on again."

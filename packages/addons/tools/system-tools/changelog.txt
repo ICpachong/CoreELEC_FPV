@@ -1,0 +1,2 @@
+1
+- move smbus.so to lib

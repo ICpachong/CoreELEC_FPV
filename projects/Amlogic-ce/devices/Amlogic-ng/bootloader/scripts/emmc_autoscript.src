@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2018-present Team CoreELEC (https://coreelec.org)
+#
+# Boot CoreELEC from the internal eMMC.
+#
+# Some vendor u-boot environments (for example the one Armbian installs on
+# Amlogic boxes) load "emmc_autoscript" from mmc 1:1 and set devtype/devnum
+# before running it. This script hands over to CoreELEC's normal cfgload
+# (configuration + kernel/dtb boot).
+#
+# install2emmc installs CoreELEC to a standard MBR layout with the same
+# labels as SD/USB media (COREELEC/STORAGE), so ce_on_emmc stays "no" and
+# cfgload uses the default boot arguments. emmc_mbr=1 prevents the Amlogic
+# kernel from replacing those MBR partitions with the vendor MPT.
+
+setenv device "${devtype}"
+setenv devnr "${devnum}"
+setenv partnr "1"
+setenv ce_on_emmc "no"
+setenv emmcmbr_opt "emmc_mbr=1"
+
+# same environment initialisation as CoreELEC's aml_autoscript (display
+# address, bootargs base, ...), but without defenv/saveenv so the existing
+# u-boot environment (vendor boot order) stays untouched
+run storeargs
+
+if fatload ${devtype} ${devnum}:1 ${loadaddr} cfgload; then
+  autoscr ${loadaddr}
+fi

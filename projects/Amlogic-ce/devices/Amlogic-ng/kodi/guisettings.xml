@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  FPV (ZTE W100D) defaults.
+
+  Some HDMI sinks attached to the W100D misrender YUV444 output (image is
+  tiled in the upper half of the screen and shakes). Without a forced
+  subsampling Kodi resets /sys/class/amhdmitx/amhdmitx0/attr to an empty
+  value whenever the display mode changes, which falls back to YUV444.
+  Force colour subsampling to RGB (1) so Kodi negotiates RGB 8-bit.
+  Users can still change it in Settings -> Player -> Videoscreen.
+-->
+<settings version="2">
+  <videoscreen>
+    <setting id="coreelec.amlogic.forcecs">1</setting>
+  </videoscreen>
+</settings>

@@ -1,0 +1,47 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: CoreELEC FPV <noreply@localhost>
+Date: Thu, 5 Nov 2026 15:00:00 +0800
+Subject: [PATCH] Add emmc_mbr boot option for standard eMMC MBR installs
+
+Vendor U-Boot restores the Amlogic MPT from the DTB, so an installed
+CoreELEC system cannot permanently replace or disable that table. Allow
+an eMMC boot script to request the standard MBR explicitly while leaving
+normal Android, USB and SD boot behaviour unchanged.
+
+diff --git a/block/partition-generic.c b/block/partition-generic.c
+--- a/block/partition-generic.c
++++ b/block/partition-generic.c
+@@ -442,6 +442,10 @@ static int validate_mpt_partition(struct parsed_partitions *state)
+ 	unsigned char *data;
+ 	int ret = 0;
+ 
++	/* Keep standard MBR partitions when explicitly booting CoreELEC from eMMC. */
++	if (strstr(saved_command_line, "emmc_mbr=1"))
++		return 0;
++
+ 	/* MPT signature is at 0x2400000 */
+ 	sect_num = (0x2400000 / 512) *
+ 		(queue_logical_block_size(state->bdev->bd_disk->queue) / 512);
+diff --git a/drivers/amlogic/mmc/emmc_partitions.c b/drivers/amlogic/mmc/emmc_partitions.c
+--- a/drivers/amlogic/mmc/emmc_partitions.c
++++ b/drivers/amlogic/mmc/emmc_partitions.c
+@@ -17,6 +17,7 @@
+ 
+ #include <linux/types.h>
+ #include <linux/stddef.h>
++#include <linux/init.h>
+ #include <linux/mtd/mtd.h>
+ #include <linux/mtd/partitions.h>
+ #include <linux/proc_fs.h>
+@@ -1386,6 +1387,11 @@ int aml_emmc_partition_ops(struct mmc_card *card, struct gendisk *disk)
+ 	if (is_card_emmc(card) == 0) /* not emmc, nothing to do */
+ 		return 0;
+ 
++	if (strstr(saved_command_line, "emmc_mbr=1")) {
++		pr_info("%s: keep standard MBR partitions\n", disk->disk_name);
++		return 0;
++	}
++
+ 	buffer = kmalloc(512, GFP_KERNEL);
+ 	if (!buffer)
+ 		return -ENOMEM;
