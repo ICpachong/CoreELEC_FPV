@@ -90,8 +90,7 @@ install2emmc -y
 - [刷机教程与故障排查](docs/flashing-guide.md)
 - [项目架构总览](docs/architecture-overview.md)
 - [流程与启动模型图](docs/workflow-diagrams.md)
-- [构建环境说明](BUILD_FPV.md)
-- [eMMC 黑屏调试记录](debug-emmc-boot-black-screen.md)
+- [构建指南](BUILD_FPV.md)
 
 ## 已知限制
 

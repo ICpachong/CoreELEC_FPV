@@ -90,8 +90,7 @@ All documentation under `docs/` is written in Chinese.
 - [Flash and troubleshooting guide](docs/flashing-guide.md)
 - [Architecture overview](docs/architecture-overview.md)
 - [Workflow and boot diagrams](docs/workflow-diagrams.md)
-- [Build environment notes](BUILD_FPV.md)
-- [eMMC black screen debug record](debug-emmc-boot-black-screen.md)
+- [Build guide](BUILD_FPV.md)
 
 ## Known limitations
 
