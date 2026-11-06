@@ -267,7 +267,7 @@ PROJECT=Amlogic-ce DEVICE=Amlogic-ng ARCH=arm DISTRO=CoreELEC \
 SUBDEVICES_FILTER=ZTE_W100D make image
 ```
 
-首次构建工具链（见 `BUILD_FPV.md`）：
+首次构建工具链（见 `docs/BUILD_FPV.md`）：
 
 ```bash
 ARCH=arm PROJECT=Amlogic-ce DEVICE=Amlogic-ng scripts/build toolchain

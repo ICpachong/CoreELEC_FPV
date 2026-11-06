@@ -32,7 +32,7 @@ The reference hardware is a 2 GB DDR4 / 8 GB eMMC S905X2 board with no RJ45 port
 
 ## Build
 
-Building requires a Linux host (x86_64) or the provided Docker image. See [BUILD_FPV.md](BUILD_FPV.md) for the Docker workflow.
+Building requires a Linux host (x86_64) or the provided Docker image. See [BUILD_FPV.md](docs/BUILD_FPV.md) for the Docker workflow.
 
 ```shell
 # 1. Toolchain and cross-compiler (first build only)
@@ -90,7 +90,7 @@ All documentation under `docs/` is written in Chinese.
 - [Flash and troubleshooting guide](docs/flashing-guide.md)
 - [Architecture overview](docs/architecture-overview.md)
 - [Workflow and boot diagrams](docs/workflow-diagrams.md)
-- [Build guide](BUILD_FPV.md)
+- [Build guide](docs/BUILD_FPV.md)
 
 ## Known limitations
 

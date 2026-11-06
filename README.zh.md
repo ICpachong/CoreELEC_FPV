@@ -32,7 +32,7 @@
 
 ## 构建
 
-需要 Linux（x86_64）主机，或使用仓库自带的 Docker 镜像；Docker 流程见 [BUILD_FPV.md](BUILD_FPV.md)。
+需要 Linux（x86_64）主机，或使用仓库自带的 Docker 镜像；Docker 流程见 [BUILD_FPV.md](docs/BUILD_FPV.md)。
 
 ```shell
 # 1. 首次构建先编译工具链
@@ -90,7 +90,7 @@ install2emmc -y
 - [刷机教程与故障排查](docs/flashing-guide.md)
 - [项目架构总览](docs/architecture-overview.md)
 - [流程与启动模型图](docs/workflow-diagrams.md)
-- [构建指南](BUILD_FPV.md)
+- [构建指南](docs/BUILD_FPV.md)
 
 ## 已知限制
 
