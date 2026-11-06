@@ -1,0 +1,21 @@
+# build products
+/build/
+/AMLDigitalFPV
+
+# editor cruft
+*.swp
+*.swo
+*~
+.vscode
+
+# dependency caches
+.cache/
+.ccls-cache/
+
+# CMake/build outputs
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+/Makefile
+/build*/
+.cmake/

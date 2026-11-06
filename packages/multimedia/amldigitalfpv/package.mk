@@ -4,14 +4,21 @@ PKG_NAME="amldigitalfpv"
 PKG_VERSION="503573e5f020ec56f29d741ed9b7c3f2c1ac54a3"
 PKG_LICENSE="GPL-3.0"
 PKG_SITE="https://github.com/imagemlt/AMLDigitalFPV"
-PKG_URL="${PKG_SITE}.git"
-PKG_GIT_CLONE_BRANCH="main"
 PKG_DEPENDS_TARGET="toolchain gstreamer gst-plugins-base gst-plugins-bad gst-plugins-good libamcodec opus libfmt spdlog pulseaudio"
 PKG_LONGDESC="AMLDigitalFPV ground station video receiver (RTP H.265 -> amcodec)"
 PKG_TOOLCHAIN="cmake"
 
-post_unpack() {
-  git -C ${PKG_BUILD} submodule update --init --recursive
+# Build from the vendored copy in third_party/ instead of cloning from GitHub
+AMLDIGITALFPV_SRC="${ROOT}/third_party/AMLDigitalFPV"
+
+# Fold the source tree state into the stamp, so any edit triggers a rebuild
+PKG_STAMP="$(find "${AMLDIGITALFPV_SRC}" -type f -printf '%P %s %T@\n' 2>/dev/null | LC_ALL=C sort | sha256sum)"
+
+unpack() {
+  rm -rf "${PKG_BUILD}"
+  mkdir -p "${PKG_BUILD}"
+  # submodule (src/concurrentqueue) is already checked out in the working copy
+  tar -C "${AMLDIGITALFPV_SRC}" --exclude=.git -cf - . | tar -C "${PKG_BUILD}" -xf -
 }
 
 pre_configure_target() {
